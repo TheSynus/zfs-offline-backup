@@ -55,6 +55,7 @@ If you use puppet for configuration, I added my puppet class to the repo
 - [ ] Make the user a parameter (not hardcoded)
 - [ ] Make other snapshot name pattern possible
 - [ ] Make transport over ssh an option
+- [ ] Add ZFS and S.M.A.R.T. Health checks
 
 **This script was tested with CentOS 7.4 and ZFS version 5**
 
