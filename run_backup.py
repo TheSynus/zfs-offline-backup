@@ -66,13 +66,20 @@ def getsnapshots(dataset, ip, backuppool='', pool=''):
     snapshots = []
     try:
         if ip:
-            snaps = subprocess.check_output(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@" + str(ip),
-                                            "/sbin/zfs list -H -r -t snapshot -o name -s creation -d 1 " + dataset])
+            args = ["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@" + str(ip),
+                    "/sbin/zfs list -H -r -t snapshot -o name -s creation -d 1 " + dataset]
         else:
-            snaps = subprocess.check_output(["/sbin/zfs", "list", "-H", "-r", "-t", "snapshot", "-o", "name",
-                                             "-s", "creation", "-d", "1", dataset])
-        if 'no datasets available' not in snaps:
-            for snapshot in snaps.splitlines():
+            args = ["/sbin/zfs", "list", "-H", "-r", "-t", "snapshot", "-o", "name", "-s", "creation",
+                    "-d", "1", dataset]
+
+        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        snapstdout = process.stdout.read()
+        snapstderr = process.stderr.read()
+        process.wait()
+        if process.returncode == 1 and 'dataset does not exist' in snapstderr:
+            return 'dataset does not exist'
+        elif 'no datasets available' not in snapstdout:
+            for snapshot in snapstdout.splitlines():
                 if 'snap_frequent' not in snapshot and 'snap_hourly' not in snapshot and 'auto-snap' in snapshot:
                     # I don't want frequent and hourly snapshots but also only auto snapshots
                     if backuppool:
@@ -83,7 +90,7 @@ def getsnapshots(dataset, ip, backuppool='', pool=''):
         else:
             print "no datasets available"
             raise ValueError
-    except Exception as ex:
+    except subprocess.CalledProcessError as ex:
         if ip:
             print "Failed to retrieve remote snapshots"
         else:
@@ -215,18 +222,30 @@ def main():
             localsnapshots = getsnapshots(dataset, 0)
             remotesnapshots = getsnapshots(args.backuppool+dataset.replace(pool, '', 1), args.ip, args.backuppool, pool)
 
-            transfersnapshots = list(OrderedSet(localsnapshots) - OrderedSet(remotesnapshots))
-            deletesnapshots = list(OrderedSet(remotesnapshots) - OrderedSet(localsnapshots))
+            if remotesnapshots == 'dataset does not exist':  # In case a new dataset was created since last backup
+                if verbosity:
+                    print 'Dataset does not exist on remote server'
+                if localsnapshots:
+                    transfersnapshots = localsnapshots
+                    deletesnapshots = []
+                    prevsnap = 'nextdataset'
+                else:
+                    if verbosity:
+                        print 'No local snapshots for dataset ' + dataset
+                    continue
+            else:
+                transfersnapshots = list(OrderedSet(localsnapshots) - OrderedSet(remotesnapshots))
+                deletesnapshots = list(OrderedSet(remotesnapshots) - OrderedSet(localsnapshots))
 
-            if not transfersnapshots and not deletesnapshots:
-                print "Remote dataset already up-to-date"
-                continue
+                if not transfersnapshots and not deletesnapshots:
+                    print "Remote dataset already up-to-date"
+                    continue
 
-            prevsnap = str(remotesnapshots[-1])
+                prevsnap = str(remotesnapshots[-1])
 
-            if prevsnap not in localsnapshots:
-                print "No reference snapshot available"
-                sys.exit(1)
+                if prevsnap not in localsnapshots:
+                    print "No reference snapshot available"
+                    sys.exit(1)
 
             if verbosity > 1:
                 if transfersnapshots:
