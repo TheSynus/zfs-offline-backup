@@ -258,19 +258,19 @@ def main():
                         if verbosity:
                             print pe
 
-        if verbosity:
-            print "Replication complete"
+    if verbosity:
+        print "Replication complete"
 
-        if args.poweroff:
+    if args.poweroff:
+        if verbosity:
+            print "Shutting down remote system"
+        try:
+            subprocess.call(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@" + str(args.ip),
+                             "/bin/sudo /sbin/init 0"])
+        except subprocess.CalledProcessError as pe:
+            print "Failed to shut down remote system"
             if verbosity:
-                print "Shutting down remote system"
-            try:
-                subprocess.call(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@" + str(args.ip),
-                                 "/bin/sudo /sbin/init 0"])
-            except subprocess.CalledProcessError as pe:
-                print "Failed to shut down remote system"
-                if verbosity:
-                    print pe
+                print pe
 
 
 if __name__ == '__main__':
