@@ -222,7 +222,10 @@ def main():
             localsnapshots = getsnapshots(dataset, 0)
             remotesnapshots = getsnapshots(args.backuppool+dataset.replace(pool, '', 1), args.ip, args.backuppool, pool)
 
-            if remotesnapshots == 'dataset does not exist':  # In case a new dataset was created since last backup
+            if not remotesnapshots:
+                print 'No remote snapshots found, try running with --initbackup if this is your first backup'
+                sys.exit(1)
+            elif remotesnapshots == 'dataset does not exist':  # In case a new dataset was created since last backup
                 if verbosity:
                     print 'Dataset does not exist on remote server'
                 if localsnapshots:
