@@ -12,7 +12,7 @@ StartTime = time.time()
 verbosity = 0
 
 def debug(loglevel, log):
-	if loglevel >= verbosity
+	if loglevel >= verbosity:
 		print log
 		
 def wakeupserver(mac, ip):
