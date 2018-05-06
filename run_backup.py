@@ -40,7 +40,7 @@ def wakeupserver(mac, ip):
                 if attempt > 1:
                     debug (1, "Server did not respond, try again. Attempt Nr " + str(attempt))
                 wakeuptime = time.time()
-				debug(2, "Sending magic packet to " + mac)
+                debug(2, "Sending magic packet to " + mac)
                 send_magic_packet(mac)
                 debug(2, "Sending magic packet to " + mac)
                 send_magic_packet(mac)
