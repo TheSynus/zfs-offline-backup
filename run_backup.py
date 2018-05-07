@@ -241,7 +241,7 @@ def main():
             for snap in deletesnapshots:
                 debug(1, "Removing snapshot " + snap + " from remote system")
                 try:
-				    remove = subprocess.check_call(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@"
+                    remove = subprocess.check_call(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@"
                                                     + str(args.ip), "/bin/sudo /sbin/zfs destroy " +
                                                     snap.replace(pool, args.backuppool, 1)])
                 except subprocess.CalledProcessError as pe:
