@@ -57,8 +57,8 @@ def getsnapshots(dataset, ip, backuppool='', pool=''):
         debug(1, "Getting remote snapshots for dataset " + dataset)
     else:
         debug(1, "Getting local snapshots for dataset " + dataset)
-
     snapshots = []
+	
     try:
         if ip:
             args = ["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@" + str(ip),
@@ -66,7 +66,6 @@ def getsnapshots(dataset, ip, backuppool='', pool=''):
         else:
             args = ["/sbin/zfs", "list", "-H", "-r", "-t", "snapshot", "-o", "name", "-s", "creation",
                     "-d", "1", dataset]
-
         process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         snapstdout = process.stdout.read()
         snapstderr = process.stderr.read()
@@ -92,9 +91,7 @@ def getsnapshots(dataset, ip, backuppool='', pool=''):
             print "Failed to retrieve local snapshots"
         debug(1, ex)
         sys.exit(1)
-
     return snapshots
-
 
 def sendsnapshot(prevsnap, snap, ip, mem, port, backuppool, poolname):
     if 'nextdataset' in prevsnap:
@@ -144,7 +141,6 @@ def sendsnapshot(prevsnap, snap, ip, mem, port, backuppool, poolname):
         print "recv rcode=" + str(recv.returncode) + " send rcode=" + str(send.returncode)\
               + " mbuffer rcode=" + str(mbuffer.returncode)
         return False
-
     return True
 
 
@@ -192,7 +188,7 @@ def main():
             debug(1, "initbackup")
             prevsnap = ''  # We don't have a snapshot to refer to for initial backup
             for snap in getsnapshots(dataset, 0):
-                debug(2,"Sending snapshot " + snap)
+            debug(2,"Sending snapshot " + snap)
                     if not sendsnapshot(prevsnap, snap, args.ip, args.mem, args.port, args.backuppool, pool):
                         print "Error while sending snapshot "
                         sys.exit(1)
@@ -240,17 +236,17 @@ def main():
                 if not sendsnapshot(prevsnap, snap, args.ip, args.mem, args.port, args.backuppool, pool):
                     print "Error while sending snapshot "
                     sys.exit(1)
-				prevsnap = snap
+                    prevsnap = snap
 
             for snap in deletesnapshots:
                 debug(1, "Removing snapshot " + snap + " from remote system")
-				try:
-					remove = subprocess.check_call(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@"
-													+ str(args.ip), "/bin/sudo /sbin/zfs destroy " +
-													snap.replace(pool, args.backuppool, 1)])
-				except subprocess.CalledProcessError as pe:
-					print "Failed to remove remote snapshot"
-					debug(1, pe)
+                try:
+				    remove = subprocess.check_call(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@"
+                                                    + str(args.ip), "/bin/sudo /sbin/zfs destroy " +
+                                                    snap.replace(pool, args.backuppool, 1)])
+                except subprocess.CalledProcessError as pe:
+                    print "Failed to remove remote snapshot"
+                    debug(1, pe)
 
     debug(1, "Replication complete")
 
@@ -262,7 +258,6 @@ def main():
         except subprocess.CalledProcessError as pe:
             print "Failed to shut down remote system"
             debug(1, pe)
-
 
 if __name__ == '__main__':
     main()
