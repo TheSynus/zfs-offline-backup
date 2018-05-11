@@ -189,9 +189,9 @@ def main():
             prevsnap = ''  # We don't have a snapshot to refer to for initial backup
             for snap in getsnapshots(dataset, 0):
 			    debug(2,"Sending snapshot " + snap)
-                    if not sendsnapshot(prevsnap, snap, args.ip, args.mem, args.port, args.backuppool, pool):
-                        print "Error while sending snapshot "
-                        sys.exit(1)
+                if not sendsnapshot(prevsnap, snap, args.ip, args.mem, args.port, args.backuppool, pool):
+                    print "Error while sending snapshot "
+                    sys.exit(1)
                 prevsnap = snap
             prevsnap = 'nextdataset'  # We cannot start an incremental send with a snapshot from another dataset
         else:
