@@ -11,10 +11,12 @@ from wakeonlan import send_magic_packet
 StartTime = time.time()
 verbosity = 0
 
+def debug(loglevel, log):
+    if loglevel >= verbosity:
+        print log
 
 def wakeupserver(mac, ip):
-    if verbosity:
-        print "Waking up Backup Server"
+    debug(1, "Waking up Backup Server")
 
     wakeuptime = time.time()
     attempt = 0
@@ -23,32 +25,26 @@ def wakeupserver(mac, ip):
     devnull = open(os.devnull, 'w')
 
     while response != 0:
-        if verbosity > 1:
-            print "Pinging server " + ip
+        debug(2, "Pinging server " + ip)
         # Ping server to check if server up
         response = subprocess.call(["ping", "-c", "1", ip], stdout=devnull)
-        if verbosity > 1:
-            if response == 0:
-                print "Server is up!"
-                return True
+        if response == 0:
+            debug(2, "Server is Up!")
+            return True
         if time.time()-wakeuptime >= 120 or attempt == 0:  # If server dosen't respond after this time, consider the wakeup attempt failed
             if attempt > 3:
                 print "Backup server did not respond in time. ABORT!"
                 return False
             else:
                 attempt += 1
-                if verbosity and attempt > 1:
-                    print "Server did not respond, try again. Attempt Nr " + str(attempt)
+                if attempt > 1:
+                    debug (1, "Server did not respond, try again. Attempt Nr " + str(attempt))
                 wakeuptime = time.time()
-
-                if verbosity > 1:
-                    print "Sending magic packet to " + mac
+                debug(2, "Sending magic packet to " + mac)
                 send_magic_packet(mac)
-                if verbosity > 1:
-                    print "Sending magic packet to " + mac
+                debug(2, "Sending magic packet to " + mac)
                 send_magic_packet(mac)
-                if verbosity > 1:
-                    print "Sending magic packet to " + mac
+                debug(2, "Sending magic packet to " + mac)
                 send_magic_packet(mac)
         time.sleep(10)
 
@@ -57,13 +53,12 @@ def wakeupserver(mac, ip):
 
 
 def getsnapshots(dataset, ip, backuppool='', pool=''):
-    if verbosity:
-        if ip:
-            print "Getting remote snapshots for dataset " + dataset
-        else:
-            print "Getting local snapshots for dataset " + dataset
-
+    if ip:
+        debug(1, "Getting remote snapshots for dataset " + dataset)
+    else:
+        debug(1, "Getting local snapshots for dataset " + dataset)
     snapshots = []
+
     try:
         if ip:
             args = ["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@" + str(ip),
@@ -71,7 +66,6 @@ def getsnapshots(dataset, ip, backuppool='', pool=''):
         else:
             args = ["/sbin/zfs", "list", "-H", "-r", "-t", "snapshot", "-o", "name", "-s", "creation",
                     "-d", "1", dataset]
-
         process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         snapstdout = process.stdout.read()
         snapstderr = process.stderr.read()
@@ -95,12 +89,9 @@ def getsnapshots(dataset, ip, backuppool='', pool=''):
             print "Failed to retrieve remote snapshots"
         else:
             print "Failed to retrieve local snapshots"
-        if verbosity:
-            print ex
+        debug(1, ex)
         sys.exit(1)
-
     return snapshots
-
 
 def sendsnapshot(prevsnap, snap, ip, mem, port, backuppool, poolname):
     if 'nextdataset' in prevsnap:
@@ -122,33 +113,23 @@ def sendsnapshot(prevsnap, snap, ip, mem, port, backuppool, poolname):
         sendargs = ["/sbin/zfs", "send", snap]
         mbfrargs = ["/bin/mbuffer", "-s", "128k", "-m", mem, "-O", ip+":"+port]
 
-    if verbosity > 2:
-        print "recvargs:"
-        print recvargs
-        print "\n sendargs:"
-        print sendargs
-        print "\n mbfrargs:"
-        print mbfrargs
+    debug(3, "recvargs: " + recvargs + "\n sendargs: " + sendargs + "\n mbfrargs:" + mbfrargs)
 
     try:
-        if verbosity > 1:
-            print "Starting receiver"
+        debug(2, "Starting receiver")
         recv = subprocess.Popen(recvargs)
         time.sleep(2)
         if recv.poll() is None:  # Check if recv process is still there, else we wasting out time
-            if verbosity > 1:
-                print "Starting zfs send"
+            debug(2, "Starting zfs send")
             send = subprocess.Popen(sendargs, stdout=subprocess.PIPE)
-            if verbosity > 1:
-                print "Starting sending mbuffer"
+            debug(2, "Starting sending mbuffer")
             mbuffer = subprocess.Popen(mbfrargs, stdin=send.stdout)
         else:
             print "Reciever failed"
             return False
     except subprocess.CalledProcessError as pe:
         print "Failed to send snapshot"
-        if verbosity:
-            print pe
+        debug(1, pe)
         return False
 
     recv.wait()
@@ -160,7 +141,6 @@ def sendsnapshot(prevsnap, snap, ip, mem, port, backuppool, poolname):
         print "recv rcode=" + str(recv.returncode) + " send rcode=" + str(send.returncode)\
               + " mbuffer rcode=" + str(mbuffer.returncode)
         return False
-
     return True
 
 
@@ -197,25 +177,21 @@ def main():
                 datasets.append(dataset)
     except Exception as ex:
         print "Failed to retrieve local datasets"
-        if verbosity:
-            print ex
+        debug(1, ex)
         sys.exit(1)
 
     pool = datasets[0]
 
     for dataset in datasets:
-        if verbosity > 1:
-            print "Processing dataset " + dataset
+        debug(2, "Processing dataset " + dataset)
         if args.initbackup:
-            if verbosity:
-                print "initbackup"
+            debug(1, "initbackup")
             prevsnap = ''  # We don't have a snapshot to refer to for initial backup
             for snap in getsnapshots(dataset, 0):
-                if verbosity > 1:
-                    print "Sending snapshot " + snap
-                    if not sendsnapshot(prevsnap, snap, args.ip, args.mem, args.port, args.backuppool, pool):
-                        print "Error while sending snapshot "
-                        sys.exit(1)
+                debug(2,"Sending snapshot " + snap)
+                if not sendsnapshot(prevsnap, snap, args.ip, args.mem, args.port, args.backuppool, pool):
+                    print "Error while sending snapshot "
+                    sys.exit(1)
                 prevsnap = snap
             prevsnap = 'nextdataset'  # We cannot start an incremental send with a snapshot from another dataset
         else:
@@ -226,15 +202,13 @@ def main():
                 print 'No remote snapshots found, try running with --initbackup if this is your first backup'
                 sys.exit(1)
             elif remotesnapshots == 'dataset does not exist':  # In case a new dataset was created since last backup
-                if verbosity:
-                    print 'Dataset does not exist on remote server'
+                debug(1, 'Dataset does not exist on remote server')
                 if localsnapshots:
                     transfersnapshots = localsnapshots
                     deletesnapshots = []
                     prevsnap = 'nextdataset'
                 else:
-                    if verbosity:
-                        print 'No local snapshots for dataset ' + dataset
+                    debug(1, 'No local snapshots for dataset ' + dataset)
                     continue
             else:
                 transfersnapshots = list(OrderedSet(localsnapshots) - OrderedSet(remotesnapshots))
@@ -250,50 +224,40 @@ def main():
                     print "No reference snapshot available"
                     sys.exit(1)
 
-            if verbosity > 1:
-                if transfersnapshots:
-                    print "Snapshots to send:"
-                    print transfersnapshots
-                if deletesnapshots:
-                    print "Snapshots to remove from remote:"
-                    print deletesnapshots
-                if transfersnapshots:
-                    print "Referencing incremental send on " + prevsnap
+            if transfersnapshots:
+                debug(2, "Snapshots to send:" + transfersnapshots)
+            if deletesnapshots:
+                debug(2, "Snapshots to remove from remote: " + deletesnapshots)
+            if transfersnapshots:
+                debug(2, "Referencing incremental send on " + prevsnap)
 
             for snap in transfersnapshots:
-                if verbosity:
-                    print "Sending snapshot " + snap
-                    if not sendsnapshot(prevsnap, snap, args.ip, args.mem, args.port, args.backuppool, pool):
-                        print "Error while sending snapshot "
-                        sys.exit(1)
+                debug(1, "Sending snapshot " + snap)
+                if not sendsnapshot(prevsnap, snap, args.ip, args.mem, args.port, args.backuppool, pool):
+                    print "Error while sending snapshot "
+                    sys.exit(1)
                     prevsnap = snap
 
             for snap in deletesnapshots:
-                if verbosity:
-                    print "Removing snapshot " + snap + " from remote system"
-                    try:
-                        remove = subprocess.check_call(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@"
-                                                        + str(args.ip), "/bin/sudo /sbin/zfs destroy " +
-                                                        snap.replace(pool, args.backuppool, 1)])
-                    except subprocess.CalledProcessError as pe:
-                        print "Failed to remove remote snapshot"
-                        if verbosity:
-                            print pe
+                debug(1, "Removing snapshot " + snap + " from remote system")
+                try:
+                    remove = subprocess.check_call(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@"
+                                                    + str(args.ip), "/bin/sudo /sbin/zfs destroy " +
+                                                    snap.replace(pool, args.backuppool, 1)])
+                except subprocess.CalledProcessError as pe:
+                    print "Failed to remove remote snapshot"
+                    debug(1, pe)
 
-    if verbosity:
-        print "Replication complete"
+    debug(1, "Replication complete")
 
     if args.poweroff:
-        if verbosity:
-            print "Shutting down remote system"
+        debug(1, "Shutting down remote system")
         try:
             subprocess.call(["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@" + str(args.ip),
                              "/bin/sudo /sbin/init 0"])
         except subprocess.CalledProcessError as pe:
             print "Failed to shut down remote system"
-            if verbosity:
-                print pe
-
+            debug(1, pe)
 
 if __name__ == '__main__':
     main()
