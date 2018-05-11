@@ -12,9 +12,9 @@ StartTime = time.time()
 verbosity = 0
 
 def debug(loglevel, log):
-	if loglevel >= verbosity:
-		print log
-		
+    if loglevel >= verbosity:
+        print log
+
 def wakeupserver(mac, ip):
     debug(1, "Waking up Backup Server")
 
@@ -58,7 +58,7 @@ def getsnapshots(dataset, ip, backuppool='', pool=''):
     else:
         debug(1, "Getting local snapshots for dataset " + dataset)
     snapshots = []
-	
+
     try:
         if ip:
             args = ["/bin/ssh", "-oStrictHostKeyChecking=no", "backup@" + str(ip),
@@ -113,7 +113,7 @@ def sendsnapshot(prevsnap, snap, ip, mem, port, backuppool, poolname):
         sendargs = ["/sbin/zfs", "send", snap]
         mbfrargs = ["/bin/mbuffer", "-s", "128k", "-m", mem, "-O", ip+":"+port]
 
-	debug(3, "recvargs: " + recvargs + "\n sendargs: " + sendargs + "\n mbfrargs:" + mbfrargs)
+    debug(3, "recvargs: " + recvargs + "\n sendargs: " + sendargs + "\n mbfrargs:" + mbfrargs)
 
     try:
         debug(2, "Starting receiver")
@@ -188,7 +188,7 @@ def main():
             debug(1, "initbackup")
             prevsnap = ''  # We don't have a snapshot to refer to for initial backup
             for snap in getsnapshots(dataset, 0):
-			    debug(2,"Sending snapshot " + snap)
+                debug(2,"Sending snapshot " + snap)
                 if not sendsnapshot(prevsnap, snap, args.ip, args.mem, args.port, args.backuppool, pool):
                     print "Error while sending snapshot "
                     sys.exit(1)
@@ -225,11 +225,11 @@ def main():
                     sys.exit(1)
 
             if transfersnapshots:
-				debug(2, "Snapshots to send:" + transfersnapshots)
+                debug(2, "Snapshots to send:" + transfersnapshots)
             if deletesnapshots:
-				debug(2, "Snapshots to remove from remote: " + deletesnapshots)
+                debug(2, "Snapshots to remove from remote: " + deletesnapshots)
             if transfersnapshots:
-				debug(2, "Referencing incremental send on " + prevsnap)
+                debug(2, "Referencing incremental send on " + prevsnap)
 
             for snap in transfersnapshots:
                 debug(1, "Sending snapshot " + snap)
